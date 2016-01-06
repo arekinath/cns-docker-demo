@@ -1,0 +1,4 @@
+FROM %%IMGPREFIX%%alpine-nginx-lua
+ADD nginx.conf /etc/nginx/
+EXPOSE 80
+CMD ["/usr/sbin/nginx", "-g", "daemon off;"]
