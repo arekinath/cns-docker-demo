@@ -2,7 +2,7 @@ FROM alpine
 RUN 	apk update && \
 	apk add nodejs && \
 	mkdir -p /app
-COPY ./rethink-db-example-nodejs/todo-angular-express /app/
+COPY ./repo/todo-angular-express /app/
 COPY ./config.js /app/
 RUN cd /app && npm install
 EXPOSE 3000
