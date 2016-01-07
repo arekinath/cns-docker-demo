@@ -47,17 +47,19 @@ demo-lb.img.tar: lb/Dockerfile lb/nginx.conf nginx.img.tar
 		< $<  > $@
 
 .PHONY: deploy
-deploy: deploy_dbs
+deploy: deploy_dbs deploy_apps deploy_lbs
 	@echo "running at http://demo-lb.svc.$(PUBSUFFIX)"
 
 .PHONY: deploy_dbs
 deploy_dbs: .deploy_firstdb .deploy_db2 .deploy_db3
 
-.PHONY: pull_rethinkdb
-pull_rethinkdb:
-	docker pull rethinkdb
+.pull:
+	docker pull rethinkdb && \
+	docker pull $(IMGPREFIX)demo-app && \
+	docker pull $(IMGPREFIX)demo-lb && \
+	touch $@
 
-.deploy_firstdb: pull_rethinkdb
+.deploy_firstdb: .pull
 	docker run -d -l triton.cns.services=demo-db --restart=always \
 		rethinkdb rethinkdb --bind all
 	@sh wait_dns.sh demo-db.svc.$(PRIVSUFFIX) 1
@@ -69,4 +71,22 @@ pull_rethinkdb:
 		rethinkdb rethinkdb --bind all \
 		--join demo-db.svc.$(PRIVSUFFIX):29015
 	@sleep 10
+	touch $@
+
+.PHONY: deploy_apps
+deploy_apps: .deploy_app1 .deploy_app2 .deploy_app3 .deploy_app4
+
+.deploy_app%: .pull .deploy_firstdb
+	docker run -d -l triton.cns.services=demo-app --restart=always \
+		quay.io/arekinath/demo-app
+	@sh wait_dns.sh demo-app.svc.$(PRIVSUFFIX) 1
+	touch $@
+
+.PHONY: deploy_lbs
+deploy_lbs: .deploy_lb1 .deploy_lb2 .deploy_lb3
+
+.deploy_lb%: .pull .deploy_app1
+	docker run -d -l triton.cns.services=demo-lb --restart=always -p 80 \
+		quay.io/arekinath/demo-lb
+	@sh wait_dns.sh demo-lb.svc.$(PUBSUFFIX) 1
 	touch $@
